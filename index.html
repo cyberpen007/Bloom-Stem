@@ -1441,10 +1441,17 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
 
-/* ---------------- STATE (persisted via window.storage when hosted, localStorage otherwise) ---------------- */
+/* ---------------- SUPABASE (shared catalog: categories, items, product photos) ---------------- */
+const SUPABASE_URL = 'https://aqithhkqgmaonmrlylob.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxaXRoaGtxZ21hb25tcmx5bG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMTY1MTAsImV4cCI6MjEwMTU5MjUxMH0.RtzMkDWBhG3GfyZBrIcwthguGley0-u3JhtkKena2N4';
+const ADMIN_EMAIL = 'cyberpen007@gmail.com';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------------- STATE (hero/testimonials/etc. persisted via window.storage or localStorage; catalog is persisted via Supabase — shared by everyone) ---------------- */
 let state = {
   hero: {
     shopName: 'Bloom &amp; Stem Florist',
@@ -1467,7 +1474,6 @@ let state = {
     { id:'c5', name:'Partner' },
   ],
   activeCat: 'c1',
-  adminPasscode: 'cyberpen007!@#',
   partners: [
     { id:'p1', name:'', address:'', link:'' },
     { id:'p2', name:'', address:'', link:'' },
@@ -1586,6 +1592,39 @@ function saveState(){
   }, 400);
 }
 
+function mapDbCategory(c){ return { id: c.id, name: c.name }; }
+function mapDbItem(i){ return { id: i.id, cat: i.category_id, name: i.name, desc: i.description, price: i.price, img: i.image_url || '', orderNumber: i.order_number }; }
+
+async function loadCatalogFromSupabase(){
+  const [{ data: cats, error: catErr }, { data: itms, error: itmErr }] = await Promise.all([
+    sb.from('categories').select('*').order('sort_order'),
+    sb.from('catalog_items').select('*').order('sort_order'),
+  ]);
+  if(catErr || itmErr){
+    console.error('Supabase load error:', catErr || itmErr);
+    return false;
+  }
+  if(cats && cats.length){
+    state.categories = cats.map(mapDbCategory);
+    state.items = (itms || []).map(mapDbItem);
+    if(!state.categories.find(c=>c.id === state.activeCat)) state.activeCat = state.categories[0].id;
+    state.itemOrderCounter = state.items.reduce((max, i)=>{
+      const n = parseInt(String(i.orderNumber || '').replace(/[^0-9]/g,''), 10);
+      return isNaN(n) ? max : Math.max(max, n);
+    }, state.itemOrderCounter || 0);
+    return true;
+  }
+  // First run — nothing in Supabase yet, seed it with the starter catalog below.
+  const seedCats = state.categories.map((c, idx) => ({ id: c.id, name: c.name, sort_order: idx }));
+  const seedItems = state.items.map((i, idx) => ({
+    id: i.id, category_id: i.cat, name: i.name, description: i.desc,
+    price: i.price || '', order_number: i.orderNumber, image_url: i.img || null, sort_order: idx,
+  }));
+  await sb.from('categories').insert(seedCats);
+  await sb.from('catalog_items').insert(seedItems);
+  return true;
+}
+
 async function loadState(){
   try{
     const result = await storageGet(STORAGE_KEY);
@@ -1596,6 +1635,11 @@ async function loadState(){
     }
   }catch(err){
     // no saved state yet — keep defaults
+  }
+  try{
+    await loadCatalogFromSupabase();
+  }catch(err){
+    console.error('Catalog load failed, falling back to local copy:', err);
   }
   const allIds = [
     ...state.categories.map(c=>c.id),
@@ -1700,6 +1744,7 @@ function unlockAdmin(){
 function lockAdmin(){
   adminUnlocked = false;
   document.body.classList.remove('admin-mode');
+  sb.auth.signOut();
   updateAdminEditLabel();
   flashStatus('Editing locked — Admin only');
   const ordersVisible = document.getElementById('view-orders').style.display !== 'none';
@@ -1740,7 +1785,7 @@ function closeAdminModal(){
 let adminFailCount = 0;
 let adminLockoutUntil = 0;
 
-function submitAdminPasscode(){
+async function submitAdminPasscode(){
   const errEl = document.getElementById('adminModalErr');
   const now = Date.now();
   if(now < adminLockoutUntil){
@@ -1750,7 +1795,11 @@ function submitAdminPasscode(){
     return;
   }
   const val = document.getElementById('adminPasscodeInput').value;
-  if(val === state.adminPasscode){
+  const submitBtn = document.getElementById('adminModalSubmit');
+  submitBtn.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: val });
+  submitBtn.disabled = false;
+  if(!error){
     adminFailCount = 0;
     unlockAdmin();
     const action = pendingAdminAction;
@@ -1792,14 +1841,15 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   }
   if(e.target.closest('#adminChangePassBtn')){
     closeAdminDropdown();
-    const current = window.prompt('Enter the current passcode:');
-    if(current === null) return;
-    if(current !== state.adminPasscode){ alert('Incorrect current passcode.'); return; }
-    const next = window.prompt('Enter a new passcode:');
-    if(next && next.trim()){
-      state.adminPasscode = next.trim();
-      saveState();
-      alert('Passcode updated.');
+    if(!adminUnlocked){ alert('Unlock editing first, then you can change your passcode.'); return; }
+    const next = window.prompt('Enter a new passcode (min 6 characters):');
+    if(next && next.trim().length >= 6){
+      sb.auth.updateUser({ password: next.trim() }).then(({ error })=>{
+        if(error){ alert('Could not update passcode: ' + error.message); }
+        else{ alert('Passcode updated.'); }
+      });
+    } else if(next !== null){
+      alert('Passcode must be at least 6 characters.');
     }
     return;
   }
@@ -2050,15 +2100,23 @@ function renderCats(){
     });
     const nameEl = pill.querySelector('.catname');
     nameEl.addEventListener('click', e=>e.stopPropagation());
-    nameEl.addEventListener('blur', ()=>{ cat.name = nameEl.textContent.trim() || cat.name; saveState(); });
+    nameEl.addEventListener('blur', async ()=>{
+      const newName = nameEl.textContent.trim() || cat.name;
+      cat.name = newName;
+      saveState();
+      const { error } = await sb.from('categories').update({ name: newName }).eq('id', cat.id);
+      if(error){ console.error('Category rename failed:', error); flashStatus('Sync failed — check connection', 3000); }
+    });
     const delEl = pill.querySelector('.cat-del');
-    delEl.addEventListener('click', (e)=>{
+    delEl.addEventListener('click', async (e)=>{
       e.stopPropagation();
       if(state.categories.length <= 1){ alert("You need at least one category."); return; }
       const msg = count > 0
         ? `Delete "${cat.name}" and its ${count} item${count===1?'':'s'}? This can't be undone.`
         : `Delete "${cat.name}"? This can't be undone.`;
       if(!confirm(msg)) return;
+      const { error } = await sb.from('categories').delete().eq('id', cat.id);
+      if(error){ alert('Could not delete category: ' + error.message); return; }
       state.categories = state.categories.filter(c=>c.id!==cat.id);
       state.items = state.items.filter(i=>i.cat!==cat.id);
       if(state.activeCat === cat.id) state.activeCat = state.categories[0].id;
@@ -2091,26 +2149,48 @@ function renderItems(){
         <div class="order-number">Order No: ${item.orderNumber}</div>
       </div>
     `;
-    card.querySelector('.card-del').addEventListener('click', ()=>{
+    card.querySelector('.card-del').addEventListener('click', async ()=>{
+      const { error } = await sb.from('catalog_items').delete().eq('id', item.id);
+      if(error){ alert('Could not delete item: ' + error.message); return; }
       state.items = state.items.filter(i=>i.id!==item.id);
       renderItems();
       renderCats();
       saveState();
     });
-    card.querySelector('.name').addEventListener('blur', e=>{ item.name = e.target.textContent.trim(); saveState(); });
-    card.querySelector('.desc').addEventListener('blur', e=>{ item.desc = e.target.textContent.trim(); saveState(); });
+    card.querySelector('.name').addEventListener('blur', async e=>{
+      item.name = e.target.textContent.trim();
+      saveState();
+      const { error } = await sb.from('catalog_items').update({ name: item.name }).eq('id', item.id);
+      if(error){ console.error('Item name sync failed:', error); flashStatus('Sync failed — check connection', 3000); }
+    });
+    card.querySelector('.desc').addEventListener('blur', async e=>{
+      item.desc = e.target.textContent.trim();
+      saveState();
+      const { error } = await sb.from('catalog_items').update({ description: item.desc }).eq('id', item.id);
+      if(error){ console.error('Item description sync failed:', error); flashStatus('Sync failed — check connection', 3000); }
+    });
     const fileInput = card.querySelector('input[type=file]');
-    fileInput.addEventListener('change', (e)=>{
+    fileInput.addEventListener('change', async (e)=>{
       const file = e.target.files[0]; if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev)=>{ item.img = ev.target.result; renderItems(); saveState(); };
-      reader.readAsDataURL(file);
+      flashStatus('Uploading photo…');
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${item.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
+      if(upErr){ alert('Photo upload failed: ' + upErr.message); flashStatus('Editing locked — Admin only'); return; }
+      const { data: pub } = sb.storage.from('product-images').getPublicUrl(path);
+      item.img = pub.publicUrl;
+      const { error: dbErr } = await sb.from('catalog_items').update({ image_url: item.img }).eq('id', item.id);
+      if(dbErr){ console.error('Image URL sync failed:', dbErr); }
+      renderItems();
+      saveState();
     });
     const imgDelBtn = card.querySelector('.img-del');
     if(imgDelBtn){
-      imgDelBtn.addEventListener('click', (e)=>{
+      imgDelBtn.addEventListener('click', async (e)=>{
         e.preventDefault(); e.stopPropagation();
         item.img = '';
+        const { error } = await sb.from('catalog_items').update({ image_url: null }).eq('id', item.id);
+        if(error){ console.error('Image removal sync failed:', error); }
         renderItems(); saveState();
       });
     }
@@ -2120,8 +2200,14 @@ function renderItems(){
   const addCard = document.createElement('div');
   addCard.className = 'add-card reveal';
   addCard.innerHTML = `<span class="plus">+</span><span>Add flower</span>`;
-  addCard.addEventListener('click', ()=>{
-    state.items.push({ id:newId('i'), cat:state.activeCat, name:'New Item', desc:'Add a description', price:'₱0', img:'', orderNumber:nextOrderNumber() });
+  addCard.addEventListener('click', async ()=>{
+    const newItem = { id:newId('i'), cat:state.activeCat, name:'New Item', desc:'Add a description', price:'₱0', img:'', orderNumber:nextOrderNumber() };
+    const { error } = await sb.from('catalog_items').insert({
+      id: newItem.id, category_id: newItem.cat, name: newItem.name, description: newItem.desc,
+      price: newItem.price, order_number: newItem.orderNumber, image_url: null,
+    });
+    if(error){ alert('Could not add item: ' + error.message); return; }
+    state.items.push(newItem);
     renderItems();
     renderCats();
     saveState();
@@ -2169,8 +2255,10 @@ function showToast(msg){
 }
 
 
-document.getElementById('addCatBtn').addEventListener('click', ()=>{
+document.getElementById('addCatBtn').addEventListener('click', async ()=>{
   const cat = { id:newId('c'), name:'New Category' };
+  const { error } = await sb.from('categories').insert({ id: cat.id, name: cat.name, sort_order: state.categories.length });
+  if(error){ alert('Could not create category: ' + error.message); return; }
   state.categories.push(cat);
   state.activeCat = cat.id;
   renderCats(); renderItems(); saveState();
@@ -2374,6 +2462,8 @@ document.getElementById('addSchedBtn').addEventListener('click', ()=>{
 /* ---------------- INIT ---------------- */
 (async function init(){
   flashStatus('Loading saved changes…');
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ adminUnlocked = true; document.body.classList.add('admin-mode'); }
   await loadState();
   applyHeroToDOM();
   wireHeroInputs();
@@ -2383,7 +2473,7 @@ document.getElementById('addSchedBtn').addEventListener('click', ()=>{
   renderOrders();
   renderSchedule();
   updateAdminEditLabel();
-  flashStatus('Editing locked — Admin only');
+  flashStatus(adminUnlocked ? 'All fields are click-to-edit' : 'Editing locked — Admin only');
 })();
 </script>
 </body>
