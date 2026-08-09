@@ -1615,12 +1615,29 @@ async function saveSiteStateToSupabase(){
   try{
     const { categories, items, ...rest } = state; // catalog syncs separately via its own tables
     const { error } = await sb.from('site_state').upsert({ key: STORAGE_KEY, value: rest, updated_at: new Date().toISOString() });
-    if(error){ console.error('Site state save error:', error); return false; }
-    return true;
+    if(error){
+      console.error('Site state save error:', error);
+      return { ok:false, sessionExpired: isAuthError(error) };
+    }
+    return { ok:true };
   }catch(err){
     console.error('Site state save exception:', err);
-    return false;
+    return { ok:false, sessionExpired: isAuthError(err) };
   }
+}
+
+/* A 42501 ("row-level security policy") or 401/PGRST301 error while we believe we're
+   an admin means the Supabase login session has actually expired/gone stale in the
+   background (common after a tab is left open/backgrounded for a while) — the write
+   is being attempted as an anonymous visitor. That's different from a real database
+   config problem, so we detect it and tell the person to log back in instead of
+   pointing them at RLS policies that are, in fact, already set up correctly. */
+function isAuthError(error){
+  if(!error) return false;
+  const code = String(error.code || '').toLowerCase();
+  const msg = String(error.message || '').toLowerCase();
+  return code === '42501' || code === 'pgrst301' || code === '401' ||
+    msg.includes('row-level security') || msg.includes('jwt') || msg.includes('permission denied');
 }
 
 function saveState(){
@@ -1628,16 +1645,23 @@ function saveState(){
   flashStatus('Saving…');
   saveTimer = setTimeout(async ()=>{
     try{
-      const okRemote = await saveSiteStateToSupabase();
-      if(okRemote){
+      const result = await saveSiteStateToSupabase();
+      if(result.ok){
         flashStatus('Saved ✓', 2200);
         hideStateSyncBanner();
         // keep a local copy too, purely as an offline emergency fallback
         storageSet(STORAGE_KEY, JSON.stringify(state)).catch(()=>{});
       } else {
         // Supabase failed — fall back to local-only save so the edit isn't lost in this tab
-        const result = await storageSet(STORAGE_KEY, JSON.stringify(state));
-        if(result){
+        const localResult = await storageSet(STORAGE_KEY, JSON.stringify(state));
+        if(result.sessionExpired){
+          // Not a config problem — the admin login has quietly expired in the background.
+          adminUnlocked = false;
+          document.body.classList.remove('admin-mode');
+          updateAdminEditLabel();
+          flashStatus('Session expired — saved locally only', 4000);
+          showStateSyncBanner('Your admin session expired, so this change only saved in this browser. Click Admin → Enable editing to log back in, then make the edit again to sync it.');
+        } else if(localResult){
           flashStatus('Saved locally only — not synced to other visitors', 4000);
           showStateSyncBanner('Changes are not syncing to the shared database — only visible in this browser. Check Supabase RLS policies on the site_state table.');
         } else {
@@ -1715,6 +1739,11 @@ async function loadState(){
     ...state.items.map(i=>i.id),
     ...state.orders.map(o=>o.id),
     ...state.schedule.map(s=>s.id),
+    ...state.testimonials.map(t=>t.id),
+    ...state.partners.map(p=>p.id),
+    ...state.howToSteps.map(h=>h.id),
+    ...state.careTips.map(c=>c.id),
+    ...state.faqs.map(f=>f.id),
   ];
   const maxNum = allIds.reduce((max, id)=>{
     const n = parseInt(String(id).replace(/[^0-9]/g,''), 10);
@@ -2527,6 +2556,33 @@ document.getElementById('addSchedBtn').addEventListener('click', ()=>{
     layer.appendChild(b);
   }
 })();
+
+/* Keep adminUnlocked in sync with the real Supabase session. Sessions can go stale
+   silently (e.g. the tab sits open/backgrounded for a long time and the background
+   token refresh doesn't get a chance to run), so re-check whenever the tab becomes
+   visible again and log the admin out gracefully rather than letting edits fail. */
+sb.auth.onAuthStateChange((event, session) => {
+  if((event === 'SIGNED_OUT' || event === 'TOKEN_REFRESH_FAILED') && adminUnlocked){
+    adminUnlocked = false;
+    document.body.classList.remove('admin-mode');
+    updateAdminEditLabel();
+    flashStatus('Session expired — please log in again');
+    showStateSyncBanner('Your admin session expired. Click Admin → Enable editing to log back in before making more changes.');
+  }
+});
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && adminUnlocked){
+    sb.auth.getSession().then(({ data: { session } })=>{
+      if(!session){
+        adminUnlocked = false;
+        document.body.classList.remove('admin-mode');
+        updateAdminEditLabel();
+        flashStatus('Session expired — please log in again');
+        showStateSyncBanner('Your admin session expired while this tab was in the background. Click Admin → Enable editing to log back in before making more changes.');
+      }
+    }).catch(()=>{});
+  }
+});
 
 /* ---------------- INIT ---------------- */
 (async function init(){
