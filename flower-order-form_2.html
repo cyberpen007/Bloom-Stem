@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root{
     --paper:#1A1B16;
@@ -325,7 +326,12 @@
 </div>
 
 <script>
-  const FORMSPREE_URL = "https://formspree.io/f/xyegklyq";
+  // EmailJS config — sends the order straight to your inbox, no third-party review step
+  const EMAILJS_PUBLIC_KEY = "1RLnWSqQUmSq6QkSm";
+  const EMAILJS_SERVICE_ID = "service_6q33ecn";
+  const EMAILJS_TEMPLATE_ID = "template_ctsww9t";
+
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 
   document.getElementById('orderForm').addEventListener('submit', async function(e){
     e.preventDefault();
@@ -334,47 +340,43 @@
     const f = new FormData(form);
     const get = k => (f.get(k) || '').toString().trim();
 
+    // Honeypot check — if this hidden field got filled, silently drop the submission
+    if (get('_gotcha')) {
+      return;
+    }
+
     submitBtn.textContent = 'Sending…';
     submitBtn.disabled = true;
 
     document.getElementById('form-success') && document.getElementById('form-success').remove();
     document.getElementById('form-error') && document.getElementById('form-error').remove();
 
-    const submitData = new FormData();
-    submitData.append('name', get('name'));
-    submitData.append('phone', get('phone'));
-    submitData.append('email', get('email'));
-    submitData.append('orderNumber', get('orderNumber') || '(none provided)');
-    submitData.append('deliveryAddress', get('address'));
-    submitData.append('deliveryDate', get('date'));
-    submitData.append('preferredTime', get('time'));
-    submitData.append('occasion', get('occasion'));
-    submitData.append('style', get('style'));
-    submitData.append('budget', get('budget'));
-    submitData.append('cardMessage', get('message') || '(none)');
-    submitData.append('notes', get('notes') || '(none)');
-    submitData.append('_subject', `New flower order from ${get('name')}`);
-    submitData.append('_gotcha', get('_gotcha'));
+    const templateParams = {
+      name: get('name'),
+      phone: get('phone'),
+      email: get('email'),
+      orderNumber: get('orderNumber') || '(none provided)',
+      deliveryAddress: get('address'),
+      deliveryDate: get('date'),
+      preferredTime: get('time'),
+      occasion: get('occasion'),
+      style: get('style'),
+      budget: get('budget'),
+      cardMessage: get('message') || '(none)',
+      notes: get('notes') || '(none)'
+    };
 
     try {
-      const res = await fetch(FORMSPREE_URL, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        body: submitData
-      });
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
 
-      if(res.ok){
-        submitBtn.textContent = 'Send order to Bloom & Stem';
-        submitBtn.disabled = false;
-        form.reset();
-        const msg = document.createElement('div');
-        msg.id = 'form-success';
-        msg.style.cssText = 'background:#1e3a1a;border:1px solid #4a7a3a;border-radius:8px;padding:16px;text-align:center;margin-top:16px;color:#9BC97A;font-size:14px;line-height:1.6;';
-        msg.innerHTML = '✅ <strong>Order sent!</strong><br>We received your order and will get back to you shortly.';
-        form.appendChild(msg);
-      } else {
-        throw new Error('Failed');
-      }
+      submitBtn.textContent = 'Send order to Bloom & Stem';
+      submitBtn.disabled = false;
+      form.reset();
+      const msg = document.createElement('div');
+      msg.id = 'form-success';
+      msg.style.cssText = 'background:#1e3a1a;border:1px solid #4a7a3a;border-radius:8px;padding:16px;text-align:center;margin-top:16px;color:#9BC97A;font-size:14px;line-height:1.6;';
+      msg.innerHTML = '✅ <strong>Order sent!</strong><br>We received your order and will get back to you shortly.';
+      form.appendChild(msg);
     } catch(err){
       submitBtn.textContent = 'Send order to Bloom & Stem';
       submitBtn.disabled = false;
@@ -383,6 +385,7 @@
       msg.style.cssText = 'background:#3a1a1a;border:1px solid #7a3a3a;border-radius:8px;padding:16px;text-align:center;margin-top:16px;color:#e4a0a0;font-size:14px;';
       msg.innerHTML = '❌ Something went wrong. Please try again.';
       form.appendChild(msg);
+      console.error('EmailJS error:', err);
     }
   });
 </script>
