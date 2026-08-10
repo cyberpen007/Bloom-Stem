@@ -202,7 +202,6 @@
   body:not(.admin-mode) .add-card{ display:none; }
   body:not(.admin-mode) #addCatBtn{ display:none; }
   body:not(.admin-mode) .cat-del{ display:none !important; }
-  body:not(.admin-mode) #addPartnerBtn{ display:none; }
   body:not(.admin-mode) .partner-del{ display:none !important; }
   body:not(.admin-mode) #addOrderBtn{ display:none; }
   body:not(.admin-mode) #addSchedBtn{ display:none; }
@@ -395,19 +394,6 @@
   .partner-field:empty:before{ content:attr(data-placeholder); color:var(--text-faint); }
   body.admin-mode .partner-field:hover{ border-color:var(--gold); }
   body.admin-mode .partner-field:focus{ border-color:var(--gold); }
-  .partner-link-box{
-    width:132px; aspect-ratio:1/1; border-radius:8px;
-    background:linear-gradient(135deg,#2b3a20,#1c2814);
-    border:1.5px dashed var(--line-soft);
-    display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; position:relative;
-    margin:0 auto;
-  }
-  .partner-link-text{
-    width:100%; padding:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ivory);
-    text-align:center; word-break:break-all; line-height:1.4; max-height:100%; overflow:hidden;
-  }
-  .partner-link-text:empty:before{ content:attr(data-placeholder); color:var(--text-faint); }
-  body:not(.admin-mode) .partner-link-box{ cursor:pointer; }
 
   /* ===== Orders ===== */
   .table{ width:100%; border-collapse:collapse; }
@@ -1215,7 +1201,6 @@
     <div>
       <h2>Our Partners</h2>
     </div>
-    <button class="btn ghost small" id="addPartnerBtn">+ Add partner</button>
   </div>
   <div class="partners-grid" id="partnersGrid"></div>
 </section>
@@ -2100,12 +2085,6 @@ function renderPartners(){
         <span class="partner-label">Address</span>
         <div class="partner-field" contenteditable="true" data-placeholder="Partner address">${p.address}</div>
       </div>
-      <div class="partner-field-wrap">
-        <span class="partner-label">Link</span>
-        <div class="partner-link-box">
-          <div class="partner-link-text" contenteditable="true" data-placeholder="Paste link (https://...)">${p.link || ''}</div>
-        </div>
-      </div>
     `;
     card.querySelector('.partner-del').addEventListener('click', ()=>{
       state.partners = state.partners.filter(x=>x.id!==p.id);
@@ -2114,23 +2093,9 @@ function renderPartners(){
     const fields = card.querySelectorAll('.partner-field');
     fields[0].addEventListener('blur', e=>{ p.name = e.target.textContent.trim(); saveState(); });
     fields[1].addEventListener('blur', e=>{ p.address = e.target.textContent.trim(); saveState(); });
-    const linkText = card.querySelector('.partner-link-text');
-    linkText.addEventListener('blur', e=>{ p.link = e.target.textContent.trim(); saveState(); });
-    linkText.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); linkText.blur(); } });
-    const linkBox = card.querySelector('.partner-link-box');
-    linkBox.addEventListener('click', (e)=>{
-      if(!adminUnlocked){
-        e.preventDefault();
-        window.openPartnerForm();
-      }
-    });
     grid.appendChild(card);
   });
 }
-document.getElementById('addPartnerBtn').addEventListener('click', ()=>{
-  state.partners.push({ id:newId('p'), name:'', address:'', link:'' });
-  renderPartners(); saveState();
-});
 
 /* ---------------- SCROLL REVEAL ---------------- */
 const revealObserver = ('IntersectionObserver' in window) ? new IntersectionObserver((entries)=>{
