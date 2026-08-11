@@ -961,25 +961,6 @@
   </div>
 </div>
 
-<!-- Shown automatically when the page is opened from a "reset your password" email link -->
-<div class="admin-modal-overlay" id="recoveryModalOverlay" style="display:none;">
-  <div class="admin-modal">
-    <h3>Set a new password</h3>
-    <p>You opened this page from a password reset email. Choose a new admin password below (minimum 6 characters).</p>
-    <div class="passcode-field-wrap">
-      <input type="password" id="recoveryPassInput" placeholder="New password" autocomplete="new-password">
-    </div>
-    <div style="height:10px;"></div>
-    <div class="passcode-field-wrap">
-      <input type="password" id="recoveryPassConfirm" placeholder="Confirm new password" autocomplete="new-password">
-    </div>
-    <div class="admin-modal-err" id="recoveryModalErr" style="display:none;"></div>
-    <div class="admin-modal-actions">
-      <button type="button" class="btn small" id="recoverySubmit">Save new password</button>
-    </div>
-  </div>
-</div>
-
 <!-- ============ HERO ============ -->
 <div class="hero wrap">
   <svg class="hero-rose" viewBox="15 35 270 420" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -1693,10 +1674,12 @@ async function storageGet(key){
 }
 
 /* ---------------- SITE STATE (shared via Supabase: hero, partners, testimonials, how-to, care tips, FAQ, orders, schedule) ---------------- */
+let lastSiteStateLoadError = null;
 async function loadSiteStateFromSupabase(){
+  lastSiteStateLoadError = null;
   try{
     const { data, error } = await sb.from('site_state').select('value').eq('key', STORAGE_KEY).maybeSingle();
-    if(error){ console.error('Site state load error:', error); return false; }
+    if(error){ console.error('Site state load error:', error); lastSiteStateLoadError = error; return false; }
     if(data && data.value){
       const saved = data.value;
       state = Object.assign({}, state, saved);
@@ -1706,6 +1689,7 @@ async function loadSiteStateFromSupabase(){
     return false;
   }catch(err){
     console.error('Site state load exception:', err);
+    lastSiteStateLoadError = err;
     return false;
   }
 }
@@ -1716,13 +1700,23 @@ async function saveSiteStateToSupabase(){
     const { error } = await sb.from('site_state').upsert({ key: STORAGE_KEY, value: rest, updated_at: new Date().toISOString() });
     if(error){
       console.error('Site state save error:', error);
-      return { ok:false, sessionExpired: isAuthError(error) };
+      return { ok:false, sessionExpired: isAuthError(error), detail: describeError(error) };
     }
     return { ok:true };
   }catch(err){
     console.error('Site state save exception:', err);
-    return { ok:false, sessionExpired: isAuthError(err) };
+    return { ok:false, sessionExpired: isAuthError(err), detail: describeError(err) };
   }
+}
+
+/* Turns a Supabase/Postgres error object into a short, human-readable string
+   (code + message) so banners can show the exact technical reason instead of
+   a generic guess. */
+function describeError(error){
+  if(!error) return 'unknown error';
+  const code = error.code ? `[${error.code}] ` : '';
+  const msg = error.message || error.error_description || error.msg || String(error);
+  return code + msg;
 }
 
 /* A 42501 ("row-level security policy") or 401/PGRST301 error while we believe we're
@@ -1758,19 +1752,21 @@ function saveState(){
         // Supabase failed — fall back to local-only save so the edit isn't lost in this tab
         const localResult = await storageSet(STORAGE_KEY, JSON.stringify(state));
         if(result.sessionExpired && wasAdmin){
-          // Not a config problem — the admin login has quietly expired in the background.
+          // Looks like the admin login went stale in the background — but show the
+          // real error too, so if this classification is wrong, it's visible instead
+          // of hidden behind a "just log back in" message that wouldn't actually fix it.
           adminUnlocked = false;
           document.body.classList.remove('admin-mode');
           updateAdminEditLabel();
           flashStatus('Session expired — saved locally only', 4000);
-          showStateSyncBanner('Your admin session expired, so this change only saved in this browser. Click Admin → Enable editing to log back in, then make the edit again to sync it.');
+          showStateSyncBanner('Your admin session expired, so this change only saved in this browser. Click Admin → Enable editing to log back in, then make the edit again to sync it. (' + result.detail + ')');
         } else if(result.sessionExpired && !wasAdmin){
           // Expected case for a visitor editing a review without an admin login:
           // the database correctly refused the write. Keep it low-key, no scary banner.
           flashStatus('Saved on this device only — not visible to other visitors yet', 4200);
         } else if(localResult){
           flashStatus('Saved locally only — not synced to other visitors', 4000);
-          showStateSyncBanner('Changes are not syncing to the shared database — only visible in this browser. Check Supabase RLS policies on the site_state table.');
+          showStateSyncBanner('Changes are not syncing to the shared database — only visible in this browser. (' + result.detail + ')');
         } else {
           flashStatus('Save failed — changes kept only in this tab', 3000);
         }
@@ -1824,7 +1820,7 @@ async function loadState(){
   try{
     const remoteOk = await loadSiteStateFromSupabase();
     if(!remoteOk){
-      showStateSyncBanner('Site content (hero, testimonials, FAQ, etc.) is not loading from the shared database — visitors may see outdated info. Check Supabase RLS policies on the site_state table.');
+      showStateSyncBanner('Site content (hero, testimonials, FAQ, etc.) is not loading from the shared database — visitors may see outdated info. (' + describeError(lastSiteStateLoadError) + ')');
       // fall back to whatever this browser has locally, so at least something renders
       const result = await storageGet(STORAGE_KEY);
       if(result && result.value){
@@ -2480,19 +2476,15 @@ function renderItems(){
       const path = `${item.id}-${Date.now()}.${ext}`;
       const { error: upErr } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
       if(upErr){
+        console.error('Photo upload error:', upErr);
+        flashStatus('Upload failed', 4000);
         if(isAuthError(upErr)){
-          // Same "session quietly expired" case handled in saveState() — the
-          // browser still thought it was an admin, but the server rejected the
-          // write. Log the UI out cleanly and tell the person to log back in,
-          // rather than showing a confusing raw permissions error.
           adminUnlocked = false;
           document.body.classList.remove('admin-mode');
           updateAdminEditLabel();
-          flashStatus('Session expired — please log in again', 4000);
-          showStateSyncBanner('Your admin session expired, so the photo could not be uploaded. Click Admin → Enable editing to log back in, then try again.');
+          showStateSyncBanner('Your admin session expired, so the photo could not be uploaded. Click Admin → Enable editing to log back in, then try again. (' + describeError(upErr) + ')');
         } else {
-          alert('Photo upload failed: ' + upErr.message);
-          flashStatus('Editing locked — Admin only');
+          showStateSyncBanner('Photo upload failed. (' + describeError(upErr) + ')');
         }
         return;
       }
@@ -2805,78 +2797,11 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-/* ---------------- PASSWORD RECOVERY ----------------
-   When someone clicks the "Reset password" link in the recovery email, Supabase
-   redirects back here with a one-time token in the URL and fires a
-   PASSWORD_RECOVERY auth event. Without handling that event, the token is just
-   silently ignored and the page loads as if nothing happened — which is exactly
-   what was going wrong. This shows a simple "set new password" form instead. */
-function showRecoveryModal(){
-  document.getElementById('recoveryModalErr').style.display = 'none';
-  document.getElementById('recoveryPassInput').value = '';
-  document.getElementById('recoveryPassConfirm').value = '';
-  document.getElementById('recoveryModalOverlay').style.display = 'flex';
-}
-function closeRecoveryModal(){
-  document.getElementById('recoveryModalOverlay').style.display = 'none';
-}
-async function submitRecoveryPassword(){
-  const errEl = document.getElementById('recoveryModalErr');
-  const pass = document.getElementById('recoveryPassInput').value;
-  const confirm = document.getElementById('recoveryPassConfirm').value;
-  if(pass.length < 6){
-    errEl.textContent = 'Password must be at least 6 characters.';
-    errEl.style.display = 'block';
-    return;
-  }
-  if(pass !== confirm){
-    errEl.textContent = "Passwords don't match.";
-    errEl.style.display = 'block';
-    return;
-  }
-  const submitBtn = document.getElementById('recoverySubmit');
-  submitBtn.disabled = true;
-  const { error } = await sb.auth.updateUser({ password: pass });
-  submitBtn.disabled = false;
-  if(error){
-    errEl.textContent = 'Could not set password: ' + error.message;
-    errEl.style.display = 'block';
-    return;
-  }
-  closeRecoveryModal();
-  adminUnlocked = true;
-  document.body.classList.add('admin-mode');
-  updateAdminEditLabel();
-  flashStatus('Password set — you are logged in ✓', 3000);
-  // Clean the recovery token out of the address bar so a refresh/share doesn't reuse it
-  history.replaceState(null, '', window.location.pathname);
-}
-document.getElementById('recoverySubmit').addEventListener('click', submitRecoveryPassword);
-document.getElementById('recoveryPassConfirm').addEventListener('keydown', e=>{
-  if(e.key === 'Enter') submitRecoveryPassword();
-});
-sb.auth.onAuthStateChange((event)=>{
-  if(event === 'PASSWORD_RECOVERY') showRecoveryModal();
-});
-
 /* ---------------- INIT ---------------- */
 (async function init(){
   flashStatus('Loading saved changes…');
   const { data: { session } } = await sb.auth.getSession();
-  if(session){
-    // getSession() only returns what's cached locally — it does NOT confirm the
-    // token is still valid server-side. A stale/expired session would otherwise
-    // silently unlock admin mode in the UI while every real write fails behind
-    // the scenes. getUser() re-checks with the server, so use that as the source
-    // of truth before flipping on admin mode.
-    const { error: userErr } = await sb.auth.getUser();
-    if(userErr){
-      await sb.auth.signOut().catch(()=>{});
-    } else {
-      adminUnlocked = true;
-      document.body.classList.add('admin-mode');
-    }
-  }
+  if(session){ adminUnlocked = true; document.body.classList.add('admin-mode'); }
   await loadState();
   applyHeroToDOM();
   wireHeroInputs();
