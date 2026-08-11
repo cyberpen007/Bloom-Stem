@@ -10,7 +10,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='12' r='6' fill='%23C97B84'/%3E%3Ccircle cx='12' cy='20' r='6' fill='%23C9A24B'/%3E%3Ccircle cx='28' cy='20' r='6' fill='%236E8F52'/%3E%3Ccircle cx='20' cy='24' r='5' fill='%2322331B'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Great+Vibes&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Great+Vibes&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --ivory:#F6F1E7;
@@ -202,13 +202,26 @@
   body:not(.admin-mode) .add-card{ display:none; }
   body:not(.admin-mode) #addCatBtn{ display:none; }
   body:not(.admin-mode) .cat-del{ display:none !important; }
-  body:not(.admin-mode) #addPartnerBtn{ display:none; }
   body:not(.admin-mode) .partner-del{ display:none !important; }
   body:not(.admin-mode) #addOrderBtn{ display:none; }
   body:not(.admin-mode) #addSchedBtn{ display:none; }
   body:not(.admin-mode) .row-del{ display:none !important; }
   body:not(.admin-mode) #addTestimonialBtn{ display:none; }
   body:not(.admin-mode) .testimonial-del{ display:none !important; }
+  /* Reviews are the one exception: anyone (not just admin) can edit the stars,
+     quote, name, and role on an existing review card. Adding a new card or
+     deleting one stays admin-only (rules above still apply to those). */
+  body:not(.admin-mode) #view-reviews .testimonial-quote,
+  body:not(.admin-mode) #view-reviews .testimonial-name,
+  body:not(.admin-mode) #view-reviews .testimonial-role{
+    pointer-events:auto !important; cursor:text !important;
+  }
+  body:not(.admin-mode) #view-reviews .testimonial-quote:hover,
+  body:not(.admin-mode) #view-reviews .testimonial-name:hover,
+  body:not(.admin-mode) #view-reviews .testimonial-role:hover{
+    background:rgba(201,162,75,0.12) !important;
+  }
+  #view-reviews .stars .star{ cursor:pointer !important; }
   body:not(.admin-mode) #addCareTipBtn{ display:none; }
   body:not(.admin-mode) #addHowToBtn{ display:none; }
   body:not(.admin-mode) .care-tip-del{ display:none !important; }
@@ -317,7 +330,7 @@
   .card-body .desc{ font-size:12.5px; color:#67624e; line-height:1.5; min-height:18px; }
   .card-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:10px; position:relative; }
   .price{ font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:500; color:var(--rose); }
-  .order-number{ font-family:'JetBrains Mono',monospace; font-size:13.5px; font-weight:700; color:var(--forest-deep); letter-spacing:0.03em; padding-top:8px; border-top:1px dashed var(--line); margin-top:2px; }
+  .order-number{ font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; font-variant-numeric:slashed-zero; color:var(--forest-deep); letter-spacing:0.05em; padding-top:8px; border-top:1px dashed var(--line); margin-top:2px; }
   .stem{ position:absolute; top:10px; left:10px; width:20px; height:20px; opacity:0.85; }
   .card-del{
     position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:50%; border:none;
@@ -381,19 +394,6 @@
   .partner-field:empty:before{ content:attr(data-placeholder); color:var(--text-faint); }
   body.admin-mode .partner-field:hover{ border-color:var(--gold); }
   body.admin-mode .partner-field:focus{ border-color:var(--gold); }
-  .partner-link-box{
-    width:132px; aspect-ratio:1/1; border-radius:8px;
-    background:linear-gradient(135deg,#2b3a20,#1c2814);
-    border:1.5px dashed var(--line-soft);
-    display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; position:relative;
-    margin:0 auto;
-  }
-  .partner-link-text{
-    width:100%; padding:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ivory);
-    text-align:center; word-break:break-all; line-height:1.4; max-height:100%; overflow:hidden;
-  }
-  .partner-link-text:empty:before{ content:attr(data-placeholder); color:var(--text-faint); }
-  body:not(.admin-mode) .partner-link-box{ cursor:pointer; }
 
   /* ===== Orders ===== */
   .table{ width:100%; border-collapse:collapse; }
@@ -435,7 +435,7 @@
   body.admin-mode .stars .star{ cursor:pointer; }
   .testimonial-quote{ font-family:'Fraunces',serif; font-size:15px; font-style:italic; line-height:1.55; color:var(--forest-deep); }
   .testimonial-name{ font-size:13px; font-weight:600; color:var(--leaf); }
-  .testimonial-role{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-soft); text-transform:uppercase; letter-spacing:0.06em; }
+  .testimonial-role{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(38,36,29,0.55); text-transform:uppercase; letter-spacing:0.06em; }
 
   /* ===== Care Tips ===== */
   .care-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:20px; }
@@ -519,6 +519,9 @@
     .bg-rose-1{ width:340px; height:340px; }
     .bg-rose-2{ width:280px; height:280px; }
     .bg-rose-3{ display:none; }
+  }
+  @media (max-width:640px){
+    .order-number{ font-size:16.5px; letter-spacing:0.06em; }
   }
 
   .petals-layer{ position:fixed; inset:0; z-index:6; pointer-events:none; overflow:hidden; }
@@ -1198,7 +1201,6 @@
     <div>
       <h2>Our Partners</h2>
     </div>
-    <button class="btn ghost small" id="addPartnerBtn">+ Add partner</button>
   </div>
   <div class="partners-grid" id="partnersGrid"></div>
 </section>
@@ -1364,15 +1366,93 @@
 
 <!-- ============ REVIEWS VIEW ============ -->
 <section class="panel wrap" id="view-reviews" style="display:none;">
-  <div class="panel-head">
+  <div class="panel-head" style="justify-content:flex-start;">
     <div>
       <h2>What customers say</h2>
       <div class="desc">Click the stars, name, or quote to edit. Real reviews build trust — keep them genuine.</div>
     </div>
-    <button class="btn ghost small" id="addTestimonialBtn">+ Add review</button>
+    <div style="display:flex; gap:10px; margin-left:24px;">
+      <button class="btn ghost small" id="leaveReviewBtn">★ Leave a review</button>
+      <button class="btn ghost small" id="addTestimonialBtn">+ Add review</button>
+    </div>
   </div>
+
+  <!-- Admin-only moderation queue for customer-submitted reviews -->
+  <div id="pendingReviewsBox" style="display:none; margin-bottom:26px; background:rgba(201,162,75,0.1); border:1px solid rgba(201,162,75,0.35); border-radius:8px; padding:18px 20px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+      <div class="mono" style="font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold);" id="pendingReviewsCount">New reviews to approve</div>
+      <button class="btn ghost small" id="refreshPendingBtn" type="button" style="color:#8A6200; border-color:#c9a24b;">↻ Refresh</button>
+    </div>
+    <div id="pendingReviewsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+  </div>
+
   <div class="testimonials-grid" id="testimonialsGrid"></div>
 </section>
+
+<!-- Leave a Review Modal (public — no admin login required) -->
+<div id="review-form-modal" style="display:none; position:fixed; inset:0; z-index:300;
+     background:rgba(22,34,15,0.72); backdrop-filter:blur(4px);
+     align-items:center; justify-content:center; padding:20px;">
+  <div style="background:var(--ivory); border-radius:14px; max-width:440px; width:100%;
+       padding:30px; box-shadow:0 30px 60px -20px rgba(0,0,0,0.5); position:relative;">
+    <button id="review-form-close" type="button"
+      style="position:absolute; top:14px; right:14px; border:none; background:transparent;
+             font-size:18px; cursor:pointer; color:#67624e; line-height:1;">✕</button>
+    <h3 style="margin:0 0 4px; font-family:'Fraunces',serif; font-size:22px; color:var(--forest-deep);">🌸 Leave a Review</h3>
+    <p style="margin:0 0 20px; font-size:13px; color:#67624e; font-family:'Inter',sans-serif; line-height:1.5;">
+      Tell other customers about your experience. We'll review it before it goes live on the site.
+    </p>
+    <form id="review-inquiry-form" style="display:flex; flex-direction:column; gap:13px;">
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.5px;
+               text-transform:uppercase; color:var(--forest); margin-bottom:5px; font-family:'Inter',sans-serif;">Rating *</label>
+        <div id="review-form-stars" style="display:flex; gap:6px; font-size:22px; line-height:1;"></div>
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.5px;
+               text-transform:uppercase; color:var(--forest); margin-bottom:5px; font-family:'Inter',sans-serif;">Your Name *</label>
+        <input type="text" name="name" required maxlength="80" placeholder="Your name"
+          style="width:100%; padding:11px 13px; border:1px solid #d0c8b0; border-radius:8px;
+                 background:#fdfcf9; font-family:'Inter',sans-serif; font-size:14px;
+                 color:var(--ink); box-sizing:border-box; outline:none;">
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.5px;
+               text-transform:uppercase; color:var(--forest); margin-bottom:5px; font-family:'Inter',sans-serif;">Role or Location</label>
+        <input type="text" name="role" maxlength="80" placeholder="e.g. Repeat customer, Bacolod City"
+          style="width:100%; padding:11px 13px; border:1px solid #d0c8b0; border-radius:8px;
+                 background:#fdfcf9; font-family:'Inter',sans-serif; font-size:14px;
+                 color:var(--ink); box-sizing:border-box; outline:none;">
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.5px;
+               text-transform:uppercase; color:var(--forest); margin-bottom:5px; font-family:'Inter',sans-serif;">Your Review *</label>
+        <textarea name="quote" required maxlength="600" placeholder="What was your experience like?"
+          rows="4"
+          style="width:100%; padding:11px 13px; border:1px solid #d0c8b0; border-radius:8px;
+                 background:#fdfcf9; font-family:'Inter',sans-serif; font-size:14px;
+                 color:var(--ink); box-sizing:border-box; outline:none; resize:vertical;"></textarea>
+      </div>
+      <div id="review-form-success" style="display:none; background:#e8f5e1; border:1px solid #a8d48a;
+           border-radius:8px; padding:12px 16px; font-size:13px; color:#2e5c1a; font-family:'Inter',sans-serif;">
+        ✅ Thank you! Your review will appear once approved.
+      </div>
+      <div id="review-form-error" style="display:none; background:#fde8e8; border:1px solid #e4a0a0;
+           border-radius:8px; padding:12px 16px; font-size:13px; color:#8c2020; font-family:'Inter',sans-serif;">
+        ❌ Something went wrong. Please try again.
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:4px;">
+        <button type="button" id="review-form-cancel"
+          style="padding:10px 18px; border-radius:999px; border:1px solid #d0c8b0;
+                 background:transparent; color:#67624e; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif;">Cancel</button>
+        <button type="submit" id="review-form-submit"
+          style="padding:10px 20px; border-radius:999px; border:none;
+                 background:var(--forest); color:var(--ivory); cursor:pointer; font-size:13px;
+                 font-weight:600; font-family:'Inter',sans-serif;">Submit Review</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- ============ CARE TIPS VIEW ============ -->
 <section class="panel wrap" id="view-care" style="display:none;">
@@ -1615,29 +1695,61 @@ async function saveSiteStateToSupabase(){
   try{
     const { categories, items, ...rest } = state; // catalog syncs separately via its own tables
     const { error } = await sb.from('site_state').upsert({ key: STORAGE_KEY, value: rest, updated_at: new Date().toISOString() });
-    if(error){ console.error('Site state save error:', error); return false; }
-    return true;
+    if(error){
+      console.error('Site state save error:', error);
+      return { ok:false, sessionExpired: isAuthError(error) };
+    }
+    return { ok:true };
   }catch(err){
     console.error('Site state save exception:', err);
-    return false;
+    return { ok:false, sessionExpired: isAuthError(err) };
   }
+}
+
+/* A 42501 ("row-level security policy") or 401/PGRST301 error while we believe we're
+   an admin means the Supabase login session has actually expired/gone stale in the
+   background (common after a tab is left open/backgrounded for a while) — the write
+   is being attempted as an anonymous visitor. That's different from a real database
+   config problem, so we detect it and tell the person to log back in instead of
+   pointing them at RLS policies that are, in fact, already set up correctly. */
+function isAuthError(error){
+  if(!error) return false;
+  const code = String(error.code || '').toLowerCase();
+  const msg = String(error.message || '').toLowerCase();
+  return code === '42501' || code === 'pgrst301' || code === '401' ||
+    msg.includes('row-level security') || msg.includes('jwt') || msg.includes('permission denied');
 }
 
 function saveState(){
   clearTimeout(saveTimer);
   flashStatus('Saving…');
+  // Capture this *before* the async save — needed to tell "an admin session went
+  // stale mid-edit" apart from "this edit was never admin-authenticated to begin
+  // with" (e.g. a visitor editing a review), which need different messaging.
+  const wasAdmin = adminUnlocked;
   saveTimer = setTimeout(async ()=>{
     try{
-      const okRemote = await saveSiteStateToSupabase();
-      if(okRemote){
+      const result = await saveSiteStateToSupabase();
+      if(result.ok){
         flashStatus('Saved ✓', 2200);
         hideStateSyncBanner();
         // keep a local copy too, purely as an offline emergency fallback
         storageSet(STORAGE_KEY, JSON.stringify(state)).catch(()=>{});
       } else {
         // Supabase failed — fall back to local-only save so the edit isn't lost in this tab
-        const result = await storageSet(STORAGE_KEY, JSON.stringify(state));
-        if(result){
+        const localResult = await storageSet(STORAGE_KEY, JSON.stringify(state));
+        if(result.sessionExpired && wasAdmin){
+          // Not a config problem — the admin login has quietly expired in the background.
+          adminUnlocked = false;
+          document.body.classList.remove('admin-mode');
+          updateAdminEditLabel();
+          flashStatus('Session expired — saved locally only', 4000);
+          showStateSyncBanner('Your admin session expired, so this change only saved in this browser. Click Admin → Enable editing to log back in, then make the edit again to sync it.');
+        } else if(result.sessionExpired && !wasAdmin){
+          // Expected case for a visitor editing a review without an admin login:
+          // the database correctly refused the write. Keep it low-key, no scary banner.
+          flashStatus('Saved on this device only — not visible to other visitors yet', 4200);
+        } else if(localResult){
           flashStatus('Saved locally only — not synced to other visitors', 4000);
           showStateSyncBanner('Changes are not syncing to the shared database — only visible in this browser. Check Supabase RLS policies on the site_state table.');
         } else {
@@ -1715,6 +1827,11 @@ async function loadState(){
     ...state.items.map(i=>i.id),
     ...state.orders.map(o=>o.id),
     ...state.schedule.map(s=>s.id),
+    ...state.testimonials.map(t=>t.id),
+    ...state.partners.map(p=>p.id),
+    ...state.howToSteps.map(h=>h.id),
+    ...state.careTips.map(c=>c.id),
+    ...state.faqs.map(f=>f.id),
   ];
   const maxNum = allIds.reduce((max, id)=>{
     const n = parseInt(String(id).replace(/[^0-9]/g,''), 10);
@@ -1789,7 +1906,7 @@ function activateView(view, activeNavBtn){
   if(view === 'partners') renderPartners();
   if(view === 'orders') renderOrders();
   if(view === 'schedule') renderSchedule();
-  if(view === 'reviews') renderTestimonials();
+  if(view === 'reviews'){ renderTestimonials(); refreshPendingReviews(); }
   if(view === 'care') renderCareTips();
   if(view === 'faq') renderFaqs();
 }
@@ -1808,6 +1925,7 @@ function unlockAdmin(){
   document.body.classList.add('admin-mode');
   updateAdminEditLabel();
   flashStatus('All fields are click-to-edit');
+  refreshPendingReviews();
 }
 
 function lockAdmin(){
@@ -1816,6 +1934,7 @@ function lockAdmin(){
   sb.auth.signOut();
   updateAdminEditLabel();
   flashStatus('Editing locked — Admin only');
+  document.getElementById('pendingReviewsBox').style.display = 'none';
   const ordersVisible = document.getElementById('view-orders').style.display !== 'none';
   const schedVisible = document.getElementById('view-schedule').style.display !== 'none';
   if(ordersVisible || schedVisible){
@@ -1966,12 +2085,6 @@ function renderPartners(){
         <span class="partner-label">Address</span>
         <div class="partner-field" contenteditable="true" data-placeholder="Partner address">${p.address}</div>
       </div>
-      <div class="partner-field-wrap">
-        <span class="partner-label">Link</span>
-        <div class="partner-link-box">
-          <div class="partner-link-text" contenteditable="true" data-placeholder="Paste link (https://...)">${p.link || ''}</div>
-        </div>
-      </div>
     `;
     card.querySelector('.partner-del').addEventListener('click', ()=>{
       state.partners = state.partners.filter(x=>x.id!==p.id);
@@ -1980,23 +2093,9 @@ function renderPartners(){
     const fields = card.querySelectorAll('.partner-field');
     fields[0].addEventListener('blur', e=>{ p.name = e.target.textContent.trim(); saveState(); });
     fields[1].addEventListener('blur', e=>{ p.address = e.target.textContent.trim(); saveState(); });
-    const linkText = card.querySelector('.partner-link-text');
-    linkText.addEventListener('blur', e=>{ p.link = e.target.textContent.trim(); saveState(); });
-    linkText.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); linkText.blur(); } });
-    const linkBox = card.querySelector('.partner-link-box');
-    linkBox.addEventListener('click', (e)=>{
-      if(!adminUnlocked){
-        e.preventDefault();
-        window.openPartnerForm();
-      }
-    });
     grid.appendChild(card);
   });
 }
-document.getElementById('addPartnerBtn').addEventListener('click', ()=>{
-  state.partners.push({ id:newId('p'), name:'', address:'', link:'' });
-  renderPartners(); saveState();
-});
 
 /* ---------------- SCROLL REVEAL ---------------- */
 const revealObserver = ('IntersectionObserver' in window) ? new IntersectionObserver((entries)=>{
@@ -2035,7 +2134,6 @@ function renderTestimonials(){
     });
     card.querySelectorAll('.stars .star').forEach(starEl=>{
       starEl.addEventListener('click', ()=>{
-        if(!adminUnlocked) return;
         t.rating = parseInt(starEl.dataset.n, 10);
         renderTestimonials(); saveState();
       });
@@ -2051,6 +2149,123 @@ document.getElementById('addTestimonialBtn').addEventListener('click', ()=>{
   state.testimonials.push({ id:newId('t'), rating:5, quote:'New review — click to edit.', name:'Customer name', role:'Role or location' });
   renderTestimonials(); saveState();
 });
+
+/* ---------------- LEAVE A REVIEW (public submission → pending_reviews table) ---------------- */
+(function(){
+  const modal = document.getElementById('review-form-modal');
+  const form = document.getElementById('review-inquiry-form');
+  const closeBtn = document.getElementById('review-form-close');
+  const cancelBtn = document.getElementById('review-form-cancel');
+  const submitBtn = document.getElementById('review-form-submit');
+  const successMsg = document.getElementById('review-form-success');
+  const errorMsg = document.getElementById('review-form-error');
+  const starsBox = document.getElementById('review-form-stars');
+  let formRating = 5;
+
+  function renderFormStars(){
+    starsBox.innerHTML = [1,2,3,4,5].map(n =>
+      `<span data-n="${n}" style="cursor:pointer; color:${n<=formRating ? 'var(--gold)' : '#ddd3ba'};">★</span>`
+    ).join('');
+    starsBox.querySelectorAll('span').forEach(s=>{
+      s.addEventListener('click', ()=>{ formRating = parseInt(s.dataset.n, 10); renderFormStars(); });
+    });
+  }
+
+  function openReviewForm(){
+    successMsg.style.display = 'none';
+    errorMsg.style.display = 'none';
+    form.reset();
+    formRating = 5;
+    renderFormStars();
+    modal.style.display = 'flex';
+  }
+  function closeReviewForm(){ modal.style.display = 'none'; }
+
+  document.getElementById('leaveReviewBtn').addEventListener('click', openReviewForm);
+  closeBtn.addEventListener('click', closeReviewForm);
+  cancelBtn.addEventListener('click', closeReviewForm);
+  modal.addEventListener('click', (e)=>{ if(e.target === modal) closeReviewForm(); });
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    submitBtn.textContent = 'Submitting…';
+    submitBtn.disabled = true;
+    successMsg.style.display = 'none';
+    errorMsg.style.display = 'none';
+    const fd = new FormData(form);
+    try{
+      const { error } = await sb.from('pending_reviews').insert({
+        rating: formRating,
+        quote: String(fd.get('quote') || '').trim(),
+        name: String(fd.get('name') || '').trim() || 'Customer',
+        role: String(fd.get('role') || '').trim(),
+      });
+      if(error) throw error;
+      successMsg.style.display = 'block';
+      form.reset();
+      submitBtn.textContent = 'Submit Review';
+      submitBtn.disabled = false;
+      setTimeout(closeReviewForm, 2500);
+      if(adminUnlocked) refreshPendingReviews();
+    }catch(err){
+      console.error('Review submit error:', err);
+      errorMsg.style.display = 'block';
+      submitBtn.textContent = 'Submit Review';
+      submitBtn.disabled = false;
+    }
+  });
+})();
+
+/* ---------------- ADMIN: PENDING REVIEWS QUEUE ---------------- */
+document.getElementById('refreshPendingBtn').addEventListener('click', refreshPendingReviews);
+async function refreshPendingReviews(){
+  const box = document.getElementById('pendingReviewsBox');
+  if(!adminUnlocked){ box.style.display = 'none'; return; }
+  try{
+    const { data, error } = await sb.from('pending_reviews').select('*').order('created_at', { ascending:true });
+    if(error){ console.error('Pending reviews load error:', error); box.style.display = 'none'; return; }
+    renderPendingReviews(data || []);
+  }catch(err){
+    console.error('Pending reviews load exception:', err);
+  }
+}
+
+function renderPendingReviews(rows){
+  const box = document.getElementById('pendingReviewsBox');
+  const list = document.getElementById('pendingReviewsList');
+  const countEl = document.getElementById('pendingReviewsCount');
+  if(!rows.length){ box.style.display = 'none'; list.innerHTML = ''; return; }
+  box.style.display = 'block';
+  countEl.textContent = `${rows.length} new review${rows.length===1?'':'s'} to approve`;
+  list.innerHTML = '';
+  rows.forEach(row=>{
+    const stars = '★★★★★☆☆☆☆☆'.slice(5 - row.rating, 10 - row.rating);
+    const item = document.createElement('div');
+    item.style.cssText = 'background:#fff; border:1px solid var(--line); border-radius:6px; padding:14px 16px; display:flex; flex-direction:column; gap:6px;';
+    item.innerHTML = `
+      <div style="color:var(--gold); font-size:13px;">${stars}</div>
+      <div style="font-family:'Fraunces',serif; font-style:italic; font-size:14px; color:var(--forest-deep); line-height:1.5;"></div>
+      <div style="font-size:12.5px; font-weight:600; color:var(--leaf);"></div>
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <button class="btn ghost small pending-approve" type="button" style="color:#2e5c1a; border-color:#a8d48a; background:#f0f8e8;">✓ Approve &amp; publish</button>
+        <button class="btn ghost small pending-reject" type="button" style="color:#8c2020; border-color:#e4a0a0; background:#fdf0f0;">✕ Discard</button>
+      </div>
+    `;
+    item.children[1].textContent = row.quote;
+    item.children[2].textContent = row.name + (row.role ? ' — ' + row.role : '');
+    item.querySelector('.pending-approve').addEventListener('click', async ()=>{
+      state.testimonials.push({ id:newId('t'), rating:row.rating, quote:row.quote, name:row.name, role:row.role || 'Customer' });
+      renderTestimonials(); saveState();
+      await sb.from('pending_reviews').delete().eq('id', row.id);
+      refreshPendingReviews();
+    });
+    item.querySelector('.pending-reject').addEventListener('click', async ()=>{
+      await sb.from('pending_reviews').delete().eq('id', row.id);
+      refreshPendingReviews();
+    });
+    list.appendChild(item);
+  });
+}
 
 /* ---------------- RENDER: HOW TO ORDER ---------------- */
 function renderHowTo(){
@@ -2528,6 +2743,33 @@ document.getElementById('addSchedBtn').addEventListener('click', ()=>{
   }
 })();
 
+/* Keep adminUnlocked in sync with the real Supabase session. Sessions can go stale
+   silently (e.g. the tab sits open/backgrounded for a long time and the background
+   token refresh doesn't get a chance to run), so re-check whenever the tab becomes
+   visible again and log the admin out gracefully rather than letting edits fail. */
+sb.auth.onAuthStateChange((event, session) => {
+  if((event === 'SIGNED_OUT' || event === 'TOKEN_REFRESH_FAILED') && adminUnlocked){
+    adminUnlocked = false;
+    document.body.classList.remove('admin-mode');
+    updateAdminEditLabel();
+    flashStatus('Session expired — please log in again');
+    showStateSyncBanner('Your admin session expired. Click Admin → Enable editing to log back in before making more changes.');
+  }
+});
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && adminUnlocked){
+    sb.auth.getSession().then(({ data: { session } })=>{
+      if(!session){
+        adminUnlocked = false;
+        document.body.classList.remove('admin-mode');
+        updateAdminEditLabel();
+        flashStatus('Session expired — please log in again');
+        showStateSyncBanner('Your admin session expired while this tab was in the background. Click Admin → Enable editing to log back in before making more changes.');
+      }
+    }).catch(()=>{});
+  }
+});
+
 /* ---------------- INIT ---------------- */
 (async function init(){
   flashStatus('Loading saved changes…');
@@ -2543,6 +2785,7 @@ document.getElementById('addSchedBtn').addEventListener('click', ()=>{
   renderSchedule();
   updateAdminEditLabel();
   flashStatus(adminUnlocked ? 'All fields are click-to-edit' : 'Editing locked — Admin only');
+  if(adminUnlocked) refreshPendingReviews();
 })();
 </script>
 </body>
