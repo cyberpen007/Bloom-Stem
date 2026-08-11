@@ -2460,7 +2460,23 @@ function renderItems(){
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `${item.id}-${Date.now()}.${ext}`;
       const { error: upErr } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
-      if(upErr){ alert('Photo upload failed: ' + upErr.message); flashStatus('Editing locked — Admin only'); return; }
+      if(upErr){
+        if(isAuthError(upErr)){
+          // Same "session quietly expired" case handled in saveState() — the
+          // browser still thought it was an admin, but the server rejected the
+          // write. Log the UI out cleanly and tell the person to log back in,
+          // rather than showing a confusing raw permissions error.
+          adminUnlocked = false;
+          document.body.classList.remove('admin-mode');
+          updateAdminEditLabel();
+          flashStatus('Session expired — please log in again', 4000);
+          showStateSyncBanner('Your admin session expired, so the photo could not be uploaded. Click Admin → Enable editing to log back in, then try again.');
+        } else {
+          alert('Photo upload failed: ' + upErr.message);
+          flashStatus('Editing locked — Admin only');
+        }
+        return;
+      }
       const { data: pub } = sb.storage.from('product-images').getPublicUrl(path);
       item.img = pub.publicUrl;
       const { error: dbErr } = await sb.from('catalog_items').update({ image_url: item.img }).eq('id', item.id);
@@ -2774,7 +2790,20 @@ document.addEventListener('visibilitychange', () => {
 (async function init(){
   flashStatus('Loading saved changes…');
   const { data: { session } } = await sb.auth.getSession();
-  if(session){ adminUnlocked = true; document.body.classList.add('admin-mode'); }
+  if(session){
+    // getSession() only returns what's cached locally — it does NOT confirm the
+    // token is still valid server-side. A stale/expired session would otherwise
+    // silently unlock admin mode in the UI while every real write fails behind
+    // the scenes. getUser() re-checks with the server, so use that as the source
+    // of truth before flipping on admin mode.
+    const { error: userErr } = await sb.auth.getUser();
+    if(userErr){
+      await sb.auth.signOut().catch(()=>{});
+    } else {
+      adminUnlocked = true;
+      document.body.classList.add('admin-mode');
+    }
+  }
   await loadState();
   applyHeroToDOM();
   wireHeroInputs();
