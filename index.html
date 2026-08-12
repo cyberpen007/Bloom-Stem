@@ -1838,6 +1838,10 @@ async function loadState(){
   }catch(err){
     console.error('Catalog load failed, falling back to local copy:', err);
   }
+  // Every fresh page load should start with all FAQ answers collapsed —
+  // "open" is per-visitor UI state, not something that should carry over
+  // from whatever was last expanded (by anyone) in the shared data.
+  if(state.faqs) state.faqs.forEach(f=>{ f.open = false; });
   const allIds = [
     ...state.categories.map(c=>c.id),
     ...state.items.map(i=>i.id),
@@ -2367,7 +2371,10 @@ function renderFaqs(){
       if(adminUnlocked && e.target.closest('.faq-q-text')) return;
       f.open = !f.open;
       item.classList.toggle('open', f.open);
-      saveState();
+      // NOTE: intentionally not calling saveState() here — the open/closed state
+      // of a question is per-visitor UI state, not shared site content. Every
+      // visitor should land on all-questions-collapsed, regardless of what
+      // anyone else (or the admin) last had expanded.
     });
     item.querySelector('.faq-q-text').addEventListener('blur', e=>{ f.q = e.target.textContent.trim(); saveState(); });
     item.querySelector('.faq-a').addEventListener('blur', e=>{ f.a = e.target.textContent.trim(); saveState(); });
