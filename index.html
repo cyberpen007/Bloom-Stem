@@ -2525,6 +2525,61 @@ function renderItems(){
   });
   grid.appendChild(addCard);
   observeReveal(addCard);
+
+  /* ---- Bulk add: pick a whole folder of photos at once, one new card per photo ---- */
+  const bulkAddCard = document.createElement('div');
+  bulkAddCard.className = 'add-card reveal bulk-add-card';
+  bulkAddCard.innerHTML = `<span class="plus">⇪</span><span>Bulk add photos</span><input type="file" accept="image/*" multiple style="display:none">`;
+  const bulkInput = bulkAddCard.querySelector('input[type=file]');
+  bulkAddCard.addEventListener('click', ()=> bulkInput.click());
+  bulkInput.addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files || []);
+    bulkInput.value = ''; // reset so picking the same folder again still fires 'change'
+    if(!files.length) return;
+    const targetCat = state.activeCat;
+    let ok = 0, failed = 0;
+    for(let i=0;i<files.length;i++){
+      const file = files[i];
+      flashStatus(`Uploading ${i+1} of ${files.length}…`);
+      // Turn "pink-rose-bouquet.jpg" into "Pink Rose Bouquet" as a starting name — editable after.
+      const rawName = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+      const niceName = rawName.replace(/\b\w/g, c => c.toUpperCase()) || 'New Item';
+      const newItem = { id:newId('i'), cat:targetCat, name:niceName, desc:'Add a description', price:'₱0', img:'', orderNumber:nextOrderNumber() };
+      const { error: insErr } = await sb.from('catalog_items').insert({
+        id: newItem.id, category_id: newItem.cat, name: newItem.name, description: newItem.desc,
+        price: newItem.price, order_number: newItem.orderNumber, image_url: null,
+      });
+      if(insErr){ console.error('Bulk add: item insert failed for', file.name, insErr); failed++; continue; }
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${newItem.id}-${Date.now()}-${i}.${ext}`;
+      const { error: upErr } = await sb.storage.from('product-images').upload(path, file, { upsert:true });
+      if(upErr){
+        console.error('Bulk add: photo upload failed for', file.name, upErr);
+        failed++;
+        state.items.push(newItem); // card is created even if the photo failed, so nothing is silently lost
+        if(isAuthError(upErr)){
+          adminUnlocked = false;
+          document.body.classList.remove('admin-mode');
+          updateAdminEditLabel();
+          showStateSyncBanner('Your admin session expired partway through the bulk upload. Click Admin → Enable editing to log back in, then re-select the remaining photos. (' + describeError(upErr) + ')');
+          break; // no point continuing — every remaining upload will fail the same way
+        }
+        continue;
+      }
+      const { data: pub } = sb.storage.from('product-images').getPublicUrl(path);
+      newItem.img = pub.publicUrl;
+      const { error: imgErr } = await sb.from('catalog_items').update({ image_url: newItem.img }).eq('id', newItem.id);
+      if(imgErr) console.error('Bulk add: image url sync failed for', file.name, imgErr);
+      state.items.push(newItem);
+      ok++;
+    }
+    renderItems();
+    renderCats();
+    saveState();
+    flashStatus(failed ? `Added ${ok} of ${files.length} — ${failed} failed, check console` : `Added ${ok} photo${ok===1?'':'s'}`, 4000);
+  });
+  grid.appendChild(bulkAddCard);
+  observeReveal(bulkAddCard);
 }
 
 /* ---------------- ADD TO ORDER: micro-interaction ---------------- */
