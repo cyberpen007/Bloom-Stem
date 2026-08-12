@@ -1696,7 +1696,7 @@ async function loadSiteStateFromSupabase(){
 
 async function saveSiteStateToSupabase(){
   try{
-    const { categories, items, ...rest } = state; // catalog syncs separately via its own tables
+    const { categories, items, activeCat, ...rest } = state; // catalog syncs separately via its own tables; activeCat is per-visitor, not shared
     const { error } = await sb.from('site_state').upsert({ key: STORAGE_KEY, value: rest, updated_at: new Date().toISOString() });
     if(error){
       console.error('Site state save error:', error);
@@ -1798,7 +1798,8 @@ async function loadCatalogFromSupabase(){
   if(cats && cats.length){
     state.categories = cats.map(mapDbCategory);
     state.items = (itms || []).map(mapDbItem);
-    if(!state.categories.find(c=>c.id === state.activeCat)) state.activeCat = state.categories[0].id;
+    // Always land on the first category for every fresh visitor/page load.
+    state.activeCat = state.categories[0].id;
     state.itemOrderCounter = state.items.reduce((max, i)=>{
       const n = parseInt(String(i.orderNumber || '').replace(/[^0-9]/g,''), 10);
       return isNaN(n) ? max : Math.max(max, n);
