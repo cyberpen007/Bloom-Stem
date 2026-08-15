@@ -574,6 +574,23 @@
     .hero-rose{ display:none; }
     .sched-row{ grid-template-columns:1fr; gap:6px; }
   }
+
+  /* ===== Floating Order Now button ===== */
+  .float-order-btn{
+    position:fixed; left:22px; bottom:22px; z-index:200;
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.01em;
+    padding:13px 22px; border-radius:999px; border:1px solid var(--gold);
+    background:var(--gold); color:var(--forest-deep);
+    box-shadow:0 10px 28px rgba(0,0,0,0.32);
+    opacity:0; transform:translateY(14px) scale(0.96); pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .float-order-btn.show{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  .float-order-btn:hover{ transform:translateY(-1px) scale(1.02); opacity:0.95; }
+  @media (max-width:720px){
+    .float-order-btn{ left:16px; right:16px; bottom:16px; justify-content:center; }
+  }
 </style>
 </head>
 <body>
@@ -1194,6 +1211,9 @@
     <div class="item"><span class="label">Contact</span><span class="val" contenteditable="true" id="metaContact">hello@hollowbloom.shop</span></div>
   </div>
 </div>
+
+<!-- Floating Order Now button — stays visible once the hero's button scrolls out of view -->
+<a href="flower-order-form_2.html" id="floatOrderBtn" class="float-order-btn">🌸 Order Now</a>
 
 <!-- ============ PARTNERS VIEW ============ -->
 <section class="panel wrap" id="view-partners" style="display:none;">
@@ -2859,6 +2879,28 @@ document.addEventListener('visibilitychange', () => {
     }).catch(()=>{});
   }
 });
+
+/* ---------------- FLOATING ORDER NOW BUTTON ---------------- */
+(function(){
+  const floatBtn = document.getElementById('floatOrderBtn');
+  const heroBtnWrap = document.querySelector('.hero .btn.blink-red');
+  if(!floatBtn || !heroBtnWrap) return;
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        // Show the floating button once the original hero button has scrolled out of view.
+        floatBtn.classList.toggle('show', !entry.isIntersecting);
+      });
+    }, { threshold:0 });
+    io.observe(heroBtnWrap);
+  } else {
+    // Fallback for older browsers without IntersectionObserver.
+    window.addEventListener('scroll', ()=>{
+      const rect = heroBtnWrap.getBoundingClientRect();
+      floatBtn.classList.toggle('show', rect.bottom < 0);
+    });
+  }
+})();
 
 /* ---------------- INIT ---------------- */
 (async function init(){
