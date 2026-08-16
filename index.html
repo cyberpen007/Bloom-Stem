@@ -591,6 +591,132 @@
   @media (max-width:720px){
     .float-order-btn{ left:16px; right:16px; bottom:16px; justify-content:center; }
   }
+
+  /* =========================================================
+     MOBILE EXPERIENCE PASS
+     Tighter spacing, bigger tap targets, calmer background
+     effects, and a table→card layout for Orders on phones.
+     ========================================================= */
+
+  /* Comfortable side margins instead of the desktop 32px */
+  @media (max-width:600px){
+    .wrap{ padding:0 18px; }
+  }
+
+  /* Header: shrink the wordmark, keep the pill-nav but make it
+     look intentional (edge fade) instead of an abrupt cut-off */
+  @media (max-width:720px){
+    .top-inner{ padding:14px 0; gap:12px; }
+    .brand{ gap:9px; }
+    .brand svg{ width:28px; height:28px; }
+    .brand-name{ font-size:34px; }
+    .brand-tag{ font-size:12.5px; }
+    .brand-badge{ font-size:11.5px; }
+    nav.tabs{
+      -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+      -webkit-mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+    }
+    nav.tabs::-webkit-scrollbar{ display:none; }
+    nav.tabs button{ padding:10px 15px; font-size:13px; flex-shrink:0; }
+    #adminToggleBtn{ padding:10px 15px; flex-shrink:0; }
+    .admin-dropdown{ right:auto; left:0; }
+  }
+
+  /* Hero: smaller type, tighter stacking, meta list reads as a
+     simple two-column grid instead of a cramped row */
+  @media (max-width:720px){
+    .hero{ padding:36px 0 40px; }
+    .eyebrow{ font-size:11px; margin-bottom:12px; }
+    .hero h1{ font-size:32px; max-width:100%; margin-bottom:14px; }
+    .hero p.sub{ font-size:15px; max-width:100%; margin-bottom:22px; }
+    .hero-meta{ display:grid; grid-template-columns:1fr 1fr; gap:18px 16px; }
+    .hero .btn{ display:block; width:100%; text-align:center; padding:14px 20px; font-size:14.5px; }
+  }
+  @media (max-width:400px){
+    .hero h1{ font-size:27px; }
+  }
+
+  /* Section headings + spacing */
+  @media (max-width:720px){
+    section.panel{ padding:8px 0 56px; }
+    .panel-head{ margin-bottom:20px; gap:12px; }
+    .panel-head h2{ font-size:23px; }
+    .panel-head .desc{ font-size:13px; max-width:100%; }
+    .panel-head .btn{ width:auto; }
+  }
+
+  /* Cards: single comfortable column, bigger touch targets on
+     delete/upload controls so fingers don't mis-tap */
+  @media (max-width:520px){
+    .grid, .partners-grid, .testimonials-grid, .care-grid{ grid-template-columns:1fr; gap:16px; }
+    .card-del, .img-del{ width:30px; height:30px; font-size:15px; }
+    .cat-pill{ padding:10px 16px; font-size:13.5px; }
+    .cat-del{ width:22px; height:22px; }
+    .care-card{ padding:16px; }
+  }
+
+  /* Orders table → stacked cards on small screens. Each row
+     becomes a mini card with the column label shown next to
+     its value (via data-label), so nothing needs sideways
+     scrolling or squinting. */
+  @media (max-width:640px){
+    .table-wrap{ overflow-x:visible; padding:0; background:transparent; border:none; }
+    #ordersTable thead{
+      position:absolute; width:1px; height:1px; overflow:hidden;
+      clip:rect(0 0 0 0); white-space:nowrap; border:0;
+    }
+    #ordersTable, #ordersTable tbody, #ordersTable tr, #ordersTable td{ display:block; width:100%; }
+    #ordersTable tbody tr{
+      background:#fff; border:1px solid var(--line); border-radius:14px;
+      padding:12px 14px; margin-bottom:12px;
+    }
+    #ordersTable tbody td{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      border-bottom:1px dashed var(--line); padding:9px 2px;
+    }
+    #ordersTable tbody td:last-child{ border-bottom:none; }
+    #ordersTable tbody td::before{
+      content:attr(data-label); font-family:'JetBrains Mono',monospace; font-size:10px;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--leaf); flex-shrink:0;
+    }
+  }
+
+  /* Schedule rows already collapse to 1 column above 720px;
+     give the delete control a proper tap target and align the
+     tag/time so the stack still reads left-to-right in order */
+  @media (max-width:720px){
+    .sched-row{ padding:14px 8px; gap:4px; }
+    .row-del{ font-size:18px; padding:6px; align-self:flex-end; }
+  }
+
+  /* Forms & inputs: 16px minimum stops iOS Safari from
+     zooming in on focus, and taller fields are easier to tap */
+  @media (max-width:600px){
+    .admin-modal input[type=password],
+    .admin-modal input[type=text],
+    input, textarea, select{ font-size:16px; }
+    .btn.small{ padding:9px 14px; font-size:12.5px; min-height:36px; }
+  }
+
+  /* Footer stacks and centers cleanly */
+  @media (max-width:600px){
+    .footer-inner{ flex-direction:column; text-align:center; gap:10px; }
+  }
+
+  /* Calmer decorative background on phones: smaller blooms,
+     fewer competing gradients so text stays readable */
+  @media (max-width:600px){
+    .bg-rose-1{ width:220px; height:220px; opacity:0.14; top:-4%; right:-14%; }
+    .bg-rose-2{ width:200px; height:200px; opacity:0.13; }
+    .float-order-btn{ padding:12px 18px; font-size:13.5px; }
+  }
+
+  /* Respect safe-area insets on notched phones for the fixed
+     floating "Order Now" button */
+  @media (max-width:720px){
+    .float-order-btn{ bottom:calc(16px + env(safe-area-inset-bottom)); }
+  }
 </style>
 </head>
 <body>
@@ -1510,7 +1636,7 @@
     <button class="btn" id="addOrderBtn">+ New order</button>
   </div>
   <div class="table-wrap">
-    <table class="table">
+    <table class="table" id="ordersTable">
       <thead>
         <tr><th>Customer</th><th>Item</th><th>Qty</th><th>Due</th><th>Status</th><th></th></tr>
       </thead>
@@ -2667,11 +2793,11 @@ function renderOrders(){
   state.orders.forEach(o=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td contenteditable="true">${o.customer}</td>
-      <td contenteditable="true">${o.item}</td>
-      <td contenteditable="true" class="mono">${o.qty}</td>
-      <td><input type="date" value="${o.due}" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff;"></td>
-      <td>
+      <td data-label="Customer" contenteditable="true">${o.customer}</td>
+      <td data-label="Item" contenteditable="true">${o.item}</td>
+      <td data-label="Qty" contenteditable="true" class="mono">${o.qty}</td>
+      <td data-label="Due"><input type="date" value="${o.due}" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff;"></td>
+      <td data-label="Status">
         <select class="status-select ${statusClass(o.status)}">
           <option value="new" ${o.status==='new'?'selected':''}>New</option>
           <option value="progress" ${o.status==='progress'?'selected':''}>In progress</option>
@@ -2679,7 +2805,7 @@ function renderOrders(){
           <option value="done" ${o.status==='done'?'selected':''}>Delivered</option>
         </select>
       </td>
-      <td><button class="row-del">✕</button></td>
+      <td data-label=""><button class="row-del">✕</button></td>
     `;
     tr.querySelectorAll('td[contenteditable]')[0].addEventListener('blur', e=>{ o.customer = e.target.textContent.trim(); saveState(); });
     tr.querySelectorAll('td[contenteditable]')[1].addEventListener('blur', e=>{ o.item = e.target.textContent.trim(); saveState(); });
