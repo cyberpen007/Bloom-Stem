@@ -203,6 +203,7 @@
   body:not(.admin-mode) #addCatBtn{ display:none; }
   body:not(.admin-mode) .cat-del{ display:none !important; }
   body:not(.admin-mode) .partner-del{ display:none !important; }
+  body:not(.admin-mode) #addPartnerBtn{ display:none; }
   body:not(.admin-mode) #addOrderBtn{ display:none; }
   body:not(.admin-mode) #addSchedBtn{ display:none; }
   body:not(.admin-mode) .row-del{ display:none !important; }
@@ -1371,6 +1372,7 @@
     <div>
       <h2>Our Partners</h2>
     </div>
+    <button class="btn ghost small" id="addPartnerBtn">+ Add partner</button>
   </div>
   <div class="partners-grid" id="partnersGrid"></div>
 </section>
@@ -2255,6 +2257,11 @@ document.addEventListener('click', (e)=>{
 
 /* ---------------- STEM ICON ---------------- */
 const stemSVG = `<svg class="stem" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" fill="#C97B84" opacity="0.9"/><path d="M10 11 L10 18" stroke="#6E8F52" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+document.getElementById('addPartnerBtn').addEventListener('click', ()=>{
+  state.partners.push({ id:newId('p'), name:'', address:'', link:'' });
+  renderPartners(); saveState();
+});
 
 /* ---------------- RENDER: PARTNERS ---------------- */
 function renderPartners(){
