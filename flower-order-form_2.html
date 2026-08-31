@@ -319,7 +319,7 @@
         </div>
       </fieldset>
 
-      <button type="submit">Send order to Bloom & Stem</button>
+      <button type="submit">Send Inquiry to Bloom & Stem</button>
       <p class="note">Your order will be sent directly to Bloom & Stem. We'll get back to you as soon as possible! 🌸</p>
     </div>
   </form>
@@ -370,7 +370,7 @@
     try {
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
 
-      submitBtn.textContent = 'Send order to Bloom & Stem';
+      submitBtn.textContent = 'Send Inquiry to Bloom & Stem';
       submitBtn.disabled = false;
       form.reset();
       const msg = document.createElement('div');
@@ -379,7 +379,7 @@
       msg.innerHTML = '✅ <strong>Order sent!</strong><br>We received your order and will get back to you shortly.';
       form.appendChild(msg);
     } catch(err){
-      submitBtn.textContent = 'Send order to Bloom & Stem';
+      submitBtn.textContent = 'Send Inquiry to Bloom & Stem';
       submitBtn.disabled = false;
       const msg = document.createElement('div');
       msg.id = 'form-error';
