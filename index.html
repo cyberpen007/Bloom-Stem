@@ -3161,4 +3161,11 @@ document.addEventListener('visibilitychange', () => {
   renderCats();
   renderItems();
   renderOrders();
-  rende
+  renderSchedule();
+  updateAdminEditLabel();
+  flashStatus(adminUnlocked ? 'All fields are click-to-edit' : 'Editing locked — Admin only');
+  if(adminUnlocked) refreshPendingReviews();
+})();
+</script>
+</body>
+</html>
