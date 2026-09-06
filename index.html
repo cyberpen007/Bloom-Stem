@@ -270,7 +270,16 @@
   section.panel{ padding:12px 0 90px; }
   .panel-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:30px; flex-wrap:wrap; gap:16px; }
   .panel-head h2{ font-size:30px; margin:0; }
-  .catalog-highlight{ color:#E8A6B0; }
+  .catalog-highlight{ 
+    color:#E8A6B0;
+    font-family:'Fraunces', serif;
+    font-size:180px;
+    font-weight: 500;
+    font-style: italic;
+    letter-spacing: 3px;
+    text-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.3);
+  }
   .panel-head .desc{ font-size:14px; color:var(--text-soft); max-width:460px; margin-top:6px; }
 
   .btn{
@@ -402,21 +411,24 @@
   .table{ width:100%; border-collapse:collapse; }
   .table thead th{
     text-align:left; font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase;
-    letter-spacing:0.08em; color:var(--leaf); padding:0 14px 12px; border-bottom:1px solid var(--line); font-weight:500;
+    letter-spacing:0.08em; color:#a8d5a8; padding:0 14px 12px; border-bottom:1px solid var(--line); font-weight:500;
   }
-  .table tbody td{ padding:14px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:middle; }
+  .table tbody td{ padding:14px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:middle; color:#fff; }
+  .table tbody td.address-col{ max-width:120px; font-size:12px; padding:10px 14px; }
+  .table tbody td input[type=date]{ background:#2a2a2a; color:#fff; }
   .table tbody tr:hover{ background:rgba(201,162,75,0.06); }
   .status-select{
     font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
-    padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer; font-weight:500;
+    padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#1a1a1a; color:#fff; cursor:pointer; font-weight:500;
   }
   .status-select.st-new{ color:var(--rose); border-color:var(--rose); }
   .status-select.st-progress{ color:var(--gold); border-color:var(--gold); }
   .status-select.st-ready{ color:var(--leaf); border-color:var(--leaf); }
   .status-select.st-done{ color:#8a8672; border-color:var(--line); }
+  .status-select.st-cancelled{ color:#d4514f; border-color:#d4514f; }
   .row-del{ border:none; background:transparent; color:var(--rose); cursor:pointer; font-size:13px; opacity:0.55; }
   .row-del:hover{ opacity:1; }
-  .table-wrap{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:8px 6px; overflow-x:auto; }
+  .table-wrap{ background:#1a1a1a; border:1px solid var(--line); border-radius:var(--radius); padding:8px 6px; overflow-x:auto; }
 
   /* ===== Testimonials ===== */
   .testimonials-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:22px; }
@@ -1105,7 +1117,6 @@
         <button type="button" id="adminToggleBtn">Admin <span class="caret">▾</span></button>
         <div class="admin-dropdown" id="adminDropdown">
           <button data-view="orders">Orders</button>
-          <button data-view="schedule">Schedule</button>
           <button type="button" id="adminEditToggleBtn">Enable editing</button>
           <button type="button" id="adminChangePassBtn" class="admin-change-pass">Change passcode</button>
         </div>
@@ -1117,7 +1128,7 @@
 <div class="admin-modal-overlay" id="adminModalOverlay" style="display:none;">
   <div class="admin-modal">
     <h3>Admin access</h3>
-    <p>Enter the passcode to view Orders and Schedule.</p>
+    <p>Enter the passcode to view Orders.</p>
     <div class="passcode-field-wrap">
       <input type="password" id="adminPasscodeInput" placeholder="Passcode" autocomplete="off">
       <button type="button" id="adminPasscodeToggle" title="Show passcode">👁</button>
@@ -1664,7 +1675,7 @@
   <div class="table-wrap">
     <table class="table" id="ordersTable">
       <thead>
-        <tr><th>Customer</th><th>Item</th><th>Qty</th><th>Due</th><th>Status</th><th></th></tr>
+        <tr><th>Customer</th><th>Item</th><th>Qty</th><th>Address</th><th>Due</th><th>Status</th><th></th></tr>
       </thead>
       <tbody id="ordersBody"></tbody>
     </table>
@@ -1767,9 +1778,9 @@ let state = {
   ],
   itemOrderCounter: 7,
   orders: [
-    { id:'o1', customer:'Maria Santos', item:'Sunrise Peony Bunch', qty:2, due:'2026-08-03', status:'progress' },
-    { id:'o2', customer:'James Cruz', item:'Bridal Cascade', qty:1, due:'2026-08-10', status:'new' },
-    { id:'o3', customer:'Lea Villanueva', item:'Trailing Pothos', qty:3, due:'2026-08-01', status:'ready' },
+    { id:'o1', customer:'Maria Santos', item:'Sunrise Peony Bunch', qty:2, address:'Bacolod City', due:'2026-08-03', status:'progress' },
+    { id:'o2', customer:'James Cruz', item:'Bridal Cascade', qty:1, address:'Silay City', due:'2026-08-10', status:'new' },
+    { id:'o3', customer:'Lea Villanueva', item:'Trailing Pothos', qty:3, address:'Bacolod City', due:'2026-08-01', status:'ready' },
   ],
   schedule: [
     { id:'s1', date:'2026-08-02', time:'07:00', task:'Flower market run — wholesale pickup', tag:'sourcing' },
@@ -2816,7 +2827,7 @@ document.getElementById('addCatBtn').addEventListener('click', async ()=>{
 });
 
 /* ---------------- RENDER: ORDERS ---------------- */
-function statusClass(s){ return { new:'st-new', progress:'st-progress', ready:'st-ready', done:'st-done' }[s]; }
+function statusClass(s){ return { new:'st-new', progress:'st-progress', ready:'st-ready', done:'st-done', cancelled:'st-cancelled' }[s]; }
 
 function renderOrders(){
   const body = document.getElementById('ordersBody');
@@ -2827,13 +2838,15 @@ function renderOrders(){
       <td data-label="Customer" contenteditable="true">${o.customer}</td>
       <td data-label="Item" contenteditable="true">${o.item}</td>
       <td data-label="Qty" contenteditable="true" class="mono">${o.qty}</td>
-      <td data-label="Due"><input type="date" value="${o.due}" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff;"></td>
+      <td data-label="Address" contenteditable="true" class="address-col">${o.address||''}</td>
+      <td data-label="Due"><input type="date" value="${o.due}" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#2a2a2a;color:#fff;"></td>
       <td data-label="Status">
         <select class="status-select ${statusClass(o.status)}">
           <option value="new" ${o.status==='new'?'selected':''}>New</option>
           <option value="progress" ${o.status==='progress'?'selected':''}>In progress</option>
           <option value="ready" ${o.status==='ready'?'selected':''}>Ready</option>
           <option value="done" ${o.status==='done'?'selected':''}>Delivered</option>
+          <option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option>
         </select>
       </td>
       <td data-label=""><button class="row-del">✕</button></td>
@@ -2841,6 +2854,7 @@ function renderOrders(){
     tr.querySelectorAll('td[contenteditable]')[0].addEventListener('blur', e=>{ o.customer = e.target.textContent.trim(); saveState(); });
     tr.querySelectorAll('td[contenteditable]')[1].addEventListener('blur', e=>{ o.item = e.target.textContent.trim(); saveState(); });
     tr.querySelectorAll('td[contenteditable]')[2].addEventListener('blur', e=>{ o.qty = e.target.textContent.trim(); saveState(); });
+    tr.querySelectorAll('td[contenteditable]')[3].addEventListener('blur', e=>{ o.address = e.target.textContent.trim(); saveState(); });
     tr.querySelector('input[type=date]').addEventListener('change', e=>{ o.due = e.target.value; saveState(); });
     const sel = tr.querySelector('select');
     sel.addEventListener('change', e=>{
@@ -2857,7 +2871,7 @@ function renderOrders(){
 }
 
 document.getElementById('addOrderBtn').addEventListener('click', ()=>{
-  state.orders.push({ id:newId('o'), customer:'New Customer', item:'Item', qty:1, due:new Date().toISOString().slice(0,10), status:'new' });
+  state.orders.push({ id:newId('o'), customer:'New Customer', item:'Item', qty:1, address:'', due:new Date().toISOString().slice(0,10), status:'new' });
   renderOrders(); saveState();
 });
 
